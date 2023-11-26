@@ -25,9 +25,21 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
     //
     // EXTERNAL NON-VIEW
     //
-
+    
+    event TEST(uint256 indexed balance);
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external override {
-        // TODO
+        (address priceHigherPool, address priceLowerPool, uint256 borrowETH, uint256 getUSDCAmountIn) = abi.decode(data, (address, address, uint256, uint256));
+        require(sender==address(this), "sender error");
+        require(msg.sender==priceLowerPool, "msg.sender error");
+        
+        (uint256 priceHigherReserve0, uint256 priceHigherReserve1, uint32 time) = IUniswapV2Pair(priceHigherPool).getReserves(); // token0 = WETH, token1 = USDC
+        uint256 getUSDCAmountOut = _getAmountOut(borrowETH, priceHigherReserve0, priceHigherReserve1);
+        
+        address token0 = IUniswapV2Pair(priceHigherPool).token0();
+        IERC20(token0).transfer(priceHigherPool, borrowETH);
+        IUniswapV2Pair(priceHigherPool).swap(0, getUSDCAmountOut, address(this), bytes(""));
+        address token1 = IUniswapV2Pair(priceLowerPool).token1();
+        IERC20(token1).transfer(priceLowerPool, getUSDCAmountIn);
     }
 
     // Method 1 is
@@ -40,7 +52,11 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
     //  - repay WETH to higher pool
     // for testing convenient, we implement the method 1 here
     function arbitrage(address priceLowerPool, address priceHigherPool, uint256 borrowETH) external {
-        // TODO
+        (uint256 priceLowerReserve0, uint256 priceLowerReserve1, uint32 time) = IUniswapV2Pair(priceLowerPool).getReserves(); // token0 = WETH, token1 = USDC
+        uint256 getUSDCAmountIn = _getAmountIn(borrowETH, priceLowerReserve1, priceLowerReserve0);
+        emit TEST(getUSDCAmountIn);
+        bytes memory data = abi.encode(priceHigherPool, priceLowerPool, borrowETH, getUSDCAmountIn);
+        IUniswapV2Pair(priceLowerPool).swap(borrowETH, 0, address(this), data);
     }
 
     //

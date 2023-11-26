@@ -45,13 +45,21 @@ contract Liquidator is IUniswapV2Callee, Ownable {
     //
 
     function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external override {
-        // TODO
+        (uint256 repayAmount, address pair) = abi.decode(data, (uint256, address));
+        require(msg.sender==pair, "not pair");
+        require(sender==address(this), "sender not msg.sender");
+        IFakeLendingProtocol(_FAKE_LENDING_PROTOCOL).liquidatePosition();
+        IWETH(_WETH9).deposit{value: repayAmount}();
+        IERC20(_WETH9).transfer(msg.sender, repayAmount);
     }
 
     // we use single hop path for testing
     function liquidate(address[] calldata path, uint256 amountOut) external {
         require(amountOut > 0, "AmountOut must be greater than 0");
-        // TODO
+        IERC20(path[1]).approve(_FAKE_LENDING_PROTOCOL, uint256(2**256-1));
+        address pair = IUniswapV2Factory(_UNISWAP_FACTORY).getPair(path[0], path[1]);
+        uint256[] memory getAmountETH = IUniswapV2Router01(_UNISWAP_ROUTER).getAmountsIn(amountOut, path);
+        IUniswapV2Pair(pair).swap(0, amountOut, address(this), abi.encode(getAmountETH[0], pair));
     }
 
     receive() external payable {}

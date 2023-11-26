@@ -66,3 +66,6 @@ contract ArbitragePracticeTest is FlashSwapSetUp {
         assertEq(usdc.balanceOf(address(arbitrage)), 98184746);
     }
 }
+
+// usdc: 4000, eth: 50
+// 4000*50 = (4000+y)*45 -> y = 200000/45 - 4000 = (200000-180000) / 45 = 20000 / 45 = 44444444 
