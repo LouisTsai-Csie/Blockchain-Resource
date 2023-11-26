@@ -44,13 +44,22 @@ contract SimpleSwap is ISimpleSwap, ERC20, Helper{
         require(tokenOut==AToken || tokenOut==BToken, "SimpleSwap: INVALID_TOKEN_OUT");
         require(tokenIn!=tokenOut, "SimpleSwap: IDENTICAL_ADDRESS");
         require(amountIn!=0, "SimpleSwap: INSUFFICIENT_INPUT_AMOUNT");
-        uint256 reserveA = reserveAToken;
-        uint256 reserveB = reserveBToken;
-        uint256 amountOut = (amountIn*reserveB) / (amountIn+reserveA);
+        uint256 reserve0 = reserveAToken;
+        uint256 reserve1 = reserveBToken;
+
+        if(tokenIn==AToken) {
+            amountOut = (amountIn*reserve1) / (amountIn+reserve0);
+            reserveAToken = reserve0 + amountIn;
+            reserveBToken = reserve1 - amountOut;
+        }
+        else {
+            amountOut = (amountIn*reserve0) / (amountIn+reserve1);
+            reserveAToken = reserve1 + amountIn;
+            reserveBToken = reserve0 - amountOut;
+        }
+        
         ERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
         ERC20(tokenOut).transfer(msg.sender, amountOut);
-        reserveAToken = ERC20(tokenIn).balanceOf(address(this));
-        reserveBToken = ERC20(tokenOut).balanceOf(address(this));
         emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOut);
     }
 
